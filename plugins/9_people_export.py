@@ -479,7 +479,7 @@ class PeopleExportTaskView(gui3d.TaskView):
     def onShow(self, event):
         self.oldHumanTransp = self.human.meshData.transparentPrimitives
         self.oldTex = self.human.getTexture()
-        self.human.setTexture(os.path.join(DATA_PATH, '..', 'skins', 'bodyparts.png'))
+        self.human.setTexture(os.path.join(DATA_PATH, '..', 'skins', 'bodyparts.png'))  # TODO change hardcoded texture with loaded one??
 
         if self.humanChanged and self.skel:
             log.message("Reloading skeleton and animation")
@@ -544,7 +544,8 @@ class PeopleExportTaskView(gui3d.TaskView):
         self.animated.setActiveAnimation(animName)
         anim = self.animated.getAnimation(animName)
         surface = np.empty((height, width, 4), dtype = np.uint8)
-
+        depthsurface = np.empty((height, width, 1), dtype = np.float32)
+        
         obj = self.human.mesh.object3d
         oldShading = obj.shadeless
         obj.parent.setShadeless(True)
@@ -557,9 +558,18 @@ class PeopleExportTaskView(gui3d.TaskView):
             glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, surface)
             img = Image(data = np.ascontiguousarray(surface[::-1,:,:3]))
             # TODO render depth in alpha channel (or render depth buffer to texture)
-            outpath = os.path.join(DATA_PATH, '%s_%s.png' % (animName, frameIdx))
+            outpath = os.path.join(DATA_PATH, 'rgb_%s_%s.png' % (animName, frameIdx))  # TODO this doesn't indicate the projection matrix, not enough info to differ
             log.message("Saving to " + outpath)
             img.save(outpath)
+            
+            # TODO get this working, outputted image is still fully black (float to int conversion needed?)
+            # http://pyopengl.sourceforge.net/documentation/manual-3.0/glReadPixels.xhtml#param-format
+            glReadPixels(0, 0, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, depthsurface)
+            depth_img = Image(data = np.ascontiguousarray(depthsurface[::-1,:,:3]))
+            depth_outpath = os.path.join(DATA_PATH, 'd_%s_%s.png' % (animName, frameIdx))  # TODO this doesn't indicate the projection matrix, not enough info to differ
+            log.message("Saving to " + depth_outpath)
+            depth_img.save(depth_outpath)
+            
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         obj.parent.setShadeless(oldShading)
