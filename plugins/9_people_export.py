@@ -38,11 +38,19 @@ import animation
 import numpy as np
 import sys, os
 
+import events3d
+import geometry3d
+import projection
+import language
+import texture
+
+
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GL import shaders
 from PyQt4 import QtCore, QtGui, QtOpenGL
 
+from glmodule import *
 
 RENDER_HELPERS = False
 WARNINGS = False
@@ -143,21 +151,56 @@ class PeopleExportTaskView(gui3d.TaskView):
             global SHOW_PICTURES
             SHOW_PICTURES = self.showPicsTggl.selected
         self.showPicsTggl.setSelected(False)
+        
+        #self.texture = mh.Texture()
+        mesh = geometry3d.RectangleMesh(20, 20, centered=True)
+        self.backgroundImage = gui3d.app.addObject(gui3d.Object([0, 0, 1], mesh, visible=False))
+        self.backgroundImage.mesh.setCameraProjection(0) # Set to model camera
+        self.opacity = 100
+        mesh.setColor([255, 255, 255, self.opacity])
+        #mesh.setColor([150, 57, 80, self.opacity])
+        mesh.setPickable(False)
+        mesh.setShadeless(True)
+        mesh.setDepthless(True)
+        mesh.priority = -90
 
-        rendBox = self.addRightWidget(gui.GroupBox('Render_settings'))
-        self.renderStyles = []
-        self.colGrpRdio = rendBox.addWidget(gui.RadioButton(self.renderStyles, "Use colorgroups", selected = True))
-        @self.colGrpRdio.mhEvent
-        def onClicked(event):
-            #gui3d.RadioButton.onClicked(self.colGrpRdio, event)
-            self.renderTextures = False
-         
-        self.texRdio = rendBox.addWidget(gui.RadioButton(self.renderStyles, "Use texture"))
-        @self.texRdio.mhEvent
-        def onClicked(event):
-            #gui3d.RadioButton.onClicked(self.texRdio, event)
-            self.renderTextures = True
-        self.renderTextures = True
+        self.opacitySlider = optionsBox.addWidget(gui.Slider(value=self.opacity, min=0,max=255, label = "BG Opacity: %d"))
+        
+        @self.opacitySlider.mhEvent
+        def onChanging(value):
+            #self.backgroundImage.mesh.setColor([150, 57, 80, value])
+            self.backgroundImage.mesh.setColor([255, 255, 255, value])
+        @self.opacitySlider.mhEvent
+        def onChange(value):
+            self.opacity = value
+            #self.backgroundImage.mesh.setColor([150, 57, 80, value])
+            self.backgroundImage.mesh.setColor([255, 255, 255, value])
+            
+        self.backgroundTggl = optionsBox.addWidget(gui.ToggleButton("Show background"))
+        @self.backgroundTggl.mhEvent
+        def onClicked(value):
+            if self.backgroundTggl.selected:
+                self.backgroundImage.setPosition(gui3d.app.selectedHuman.getPosition())
+                self.backgroundImage.show()
+            else:
+                self.backgroundImage.setPosition(gui3d.app.selectedHuman.getPosition())
+                self.backgroundImage.hide()
+            mh.redraw()
+                
+#         rendBox = self.addRightWidget(gui.GroupBox('Render_settings'))
+#         self.renderStyles = []
+#         self.colGrpRdio = rendBox.addWidget(gui.RadioButton(self.renderStyles, "Use colorgroups", selected = True))
+#         @self.colGrpRdio.mhEvent
+#         def onClicked(event):
+#             #gui3d.RadioButton.onClicked(self.colGrpRdio, event)
+#             self.renderTextures = False
+#          
+#         self.texRdio = rendBox.addWidget(gui.RadioButton(self.renderStyles, "Use texture"))
+#         @self.texRdio.mhEvent
+#         def onClicked(event):
+#             #gui3d.RadioButton.onClicked(self.texRdio, event)
+#             self.renderTextures = True
+#         self.renderTextures = True
 
         displayBox = self.addRightWidget(gui.GroupBox('Display'))
         self.showHumanTggl = displayBox.addWidget(gui.ToggleButton("Show human"))
@@ -514,7 +557,7 @@ class PeopleExportTaskView(gui3d.TaskView):
 
     def renderAnimation(self, animName, clearColor=[150.0/255, 57.0/255, 80.0/255, 1.0], width=800, height=600):
         # TODO this creates an error with me
-        from glmodule import *
+        #from glmodule import *
         from texture import Texture
         from core import G
 
@@ -544,31 +587,43 @@ class PeopleExportTaskView(gui3d.TaskView):
         self.animated.setActiveAnimation(animName)
         anim = self.animated.getAnimation(animName)
         surface = np.empty((height, width, 4), dtype = np.uint8)
-        depthsurface = np.empty((height, width, 1), dtype = np.float32)
+        depth_surface = np.empty((height, width, 1), dtype = np.float32)
+        depth_surface_16 = np.empty((height, width, 1), dtype = np.uint16)
         
         obj = self.human.mesh.object3d
         oldShading = obj.shadeless
         obj.parent.setShadeless(True)
         #obj.parent.transparentPrimitives = 0
-
+        
+        bg = self.backgroundImage.mesh.object3d
+        
         for frameIdx in xrange(anim.nFrames):
             self.animated.setToFrame(frameIdx)
+            
+            bg.draw() # TODO fix how to get this into depth image as well
             obj.draw()
 
             glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, surface)
             img = Image(data = np.ascontiguousarray(surface[::-1,:,:3]))
-            # TODO render depth in alpha channel (or render depth buffer to texture)
             outpath = os.path.join(DATA_PATH, 'rgb_%s_%s.png' % (animName, frameIdx))  # TODO this doesn't indicate the projection matrix, not enough info to differ
             log.message("Saving to " + outpath)
             img.save(outpath)
             
-            # TODO get this working, outputted image is still fully black (float to int conversion needed?)
             # http://pyopengl.sourceforge.net/documentation/manual-3.0/glReadPixels.xhtml#param-format
-            glReadPixels(0, 0, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, depthsurface)
-            depth_img = Image(data = np.ascontiguousarray(depthsurface[::-1,:,:3]))
-            depth_outpath = os.path.join(DATA_PATH, 'd_%s_%s.png' % (animName, frameIdx))  # TODO this doesn't indicate the projection matrix, not enough info to differ
+            glReadPixels(0, 0, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, depth_surface)
+            depth_img = Image(data = np.ascontiguousarray(depth_surface[::-1,:,:3]))
+            depth_outpath = os.path.join(DATA_PATH, 'd_32f_%s_%s.png' % (animName, frameIdx))  # TODO this doesn't indicate the projection matrix, not enough info to differ
             log.message("Saving to " + depth_outpath)
             depth_img.save(depth_outpath)
+            
+            # Also save the image as uint8 image
+            glReadPixels(0, 0, width, height, GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT, depth_surface_16)
+            #depth_img8 = Image(data = np.ascontiguousarray(depth_surface_8[::-1,:,:3]))
+            depth_img_16 = Image(data = np.ascontiguousarray(depth_surface_16[::-1,:,:1]))
+            depth_outpath_16 = os.path.join(DATA_PATH, 'd_ui16_%s_%s.png' % (animName, frameIdx))  # TODO this doesn't indicate the projection matrix, not enough info to differ
+            log.message("Saving to " + depth_outpath_16)
+            depth_img_16.save(depth_outpath_16)
+            
             
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
@@ -618,7 +673,6 @@ class PeopleExportTaskView(gui3d.TaskView):
             glLoadMatrixf(pMat)
 
         self.defineModelView(simple, self.useMHCamTggl.selected)
-
 
     def defineModelView(self, simple, mhOrientation=False):
 
@@ -687,7 +741,6 @@ class PeopleExportTaskView(gui3d.TaskView):
                 # Rotate camera 180 degrees around center (along the up vector)
                 #glPushMatrix()
                 glRotatef(180.0, 0.0, 1.0, 0.0)
-
 
     def initShaders(self):
         self.shader_vp = '''
