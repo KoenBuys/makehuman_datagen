@@ -64,6 +64,14 @@ class Skeleton(object):
             bone.display()
         log.debug(">")
 
+    def canonalizeBoneNames(self):
+        newBones = {}
+        for bName, bone in self.bones.items():
+            canonicalName = bName.lower().replace(' ','_').replace('-','_')
+            bone.name = canonicalName
+            newBones[bone.name] = bone
+        self.bones = newBones
+
     def fromRigFile(self, filename, mesh):
         # TODO the .rig file parser does not belong in exportutils package (it is an importer...)
         import exportutils.rig
@@ -683,13 +691,29 @@ def getProxyWeights(proxy, humanWeights, mesh):
 
     return boneWeights
 
+__referenceRig = None       # TODO this cache is not refreshed if human changes
 # TODO code replication is not nice...
-def loadTargetMapping(rigName):
+def loadTargetMapping(rigName, skel):
+    """
+    Returns mapping of skeleton bones to reference rig bone names.
+    Return format is a breadth-first ordered list with for each bone in the
+    skeleton respectively a reference bone name. Entries can be None if no
+    mapping to a bone exists.
+    This reference rig to skeleton mapping assumes both rigs have the same rest
+    pose.
+    """
+    global __referenceRig
     import os
 
     path = os.path.join("tools/blender26x/mh_mocap_tool/target_rigs/", "%s.trg" % rigName)
     if not os.path.isfile(path):
         raise RuntimeError("File %s with skeleton rig mapping does not exist.", path)
+
+    if not __referenceRig:
+        from core import G
+        filename = os.path.join('data', 'rigs', 'soft1.rig')
+        __referenceRig, _ = loadRig(filename, G.app.selectedHuman.meshData)
+        print [bone.name for bone in __referenceRig.getBones()]
 
     fp = open(path, "r")
     status = 0
@@ -722,19 +746,26 @@ def loadTargetMapping(rigName):
     #return (name, bones,renames,ikbones)
 
     boneMap = {}
+    print [bone.name for bone in __referenceRig.getBones()]
+    print [bone.name for bone in skel.getBones()]
     for (skelBone, refBone) in bones:
+        # Determine compensation orientation between source (ref) and target bone
+        tgtBone = skel.getBone(skelBone)
+        refBone = __referenceRig.getBone(refBone)
+        rotA = refBone.matRestRelative.copy()
+        rotB = tgtBone.matRestRelative.copy()
+        # Rotation only
+        rotA[:3,3] = 0
+        rotB[:3,3] = 0
+        rotation = np.dot(rotA, la.inv(rotB))
+        #rotation = np.dot(rotA.transpose(), rotB)
+        boneMap[skelBone] = (refBone.name, rotation)
+        '''
         boneMap[skelBone] = refBone
+        '''
     return boneMap
 
-def loadJointsMapping(rigName, skel):
-    """
-    Returns mapping of skeleton bones to reference rig bone names.
-    Return format is a breadth-first ordered list with for each bone in the
-    skeleton respectively a reference bone name. Entries can be None if no
-    mapping to a bone exists.
-    This reference rig to skeleton mapping assumes both rigs have the same rest
-    pose.
-    """
+def loadTargetJointsMapping(rigName, skel):
     boneMap = loadTargetMapping(rigName, skel)
     # TODO add compensation rotation (retarget to target rig)
     return [boneMap[bone.name] if bone.name in boneMap.keys() else None  for bone in skel.getBones()]
@@ -809,13 +840,13 @@ def getRetargetMapping(sourceRig, targetRig, skel):
 
     # Remap from reference rig to target rig
     if targetRig and targetRig != "soft1" and targetRig != "rigid" and targetRig != "mhx":
-        targetMapping = loadTargetMapping(targetRig)
+        targetMapping = loadTargetMapping(targetRig, skel)
 
     # Combine source and target mappings
     if sourceMapping and targetMapping:
         for bone in skel.getBones():
             if bone.name in targetMapping:
-                refBone = targetMapping[bone.name]
+                refBone = targetMapping[bone.name]  # TODO add rotation
                 if refBone and refBone in sourceMapping:
                     srcBone, rotate = sourceMapping[refBone]
                     rotate = rotate - __getRotation(bone.parent, sourceMapping, targetMapping)
@@ -828,9 +859,9 @@ def getRetargetMapping(sourceRig, targetRig, skel):
     elif targetMapping:
         for bone in skel.getBones():
             if bone.name in targetMapping:
-                result.append( (targetMapping[bone.name], 0.0) )
+                result.append( targetMapping[bone.name] )
             else:
-                result.append( (None, 0.0) )
+                result.append( (None, np.identity(4, dtype=np.float32)) )
     # Only remap source rig to reference rig
     elif sourceMapping:
         for bone in skel.getBones():

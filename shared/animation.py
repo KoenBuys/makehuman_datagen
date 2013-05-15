@@ -298,3 +298,16 @@ class AnimatedMesh(object):
         mesh.changeCoords(verts)
         mesh.calcNormals()
         mesh.update()
+
+def emptyTrack(nFrames, nBones=1):
+    """
+    Create an empty (rest pose) animation track pose data array.
+    """
+    nMats = nFrames*nBones
+    return np.tile(np.identity(4), nMats).transpose().reshape((nMats,4,4))
+
+def emptyPose(nBones=1):
+    """
+    Create an empty animation containing one frame. 
+    """
+    return emptyTrack(1, nBones)

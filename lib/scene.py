@@ -81,7 +81,7 @@ class Environment(SceneObject):
         SceneObject.__init__(
             self, scene,
             attributes =
-            {'ambience': (0.1, 0.1, 0.1),
+            {'ambience': (0.2, 0.2, 0.2),
              'skybox': None})
 
 

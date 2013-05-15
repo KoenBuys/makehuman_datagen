@@ -13,7 +13,7 @@
             roughness 0.01
             phong 0 phong_size 0
             ambient 0
-            diffuse 3
+            diffuse 6
             reflection {0}
             conserve_energy
         }
@@ -22,11 +22,11 @@
         pigment { image_map {png "%%name%%_sss_greenlmap.png" interpolate 2 transmit all 1/2} }
         normal  {%%greennormal%%}
         finish { 
-            specular 3*%%edss%%
+            specular 6*%%edss%%
             roughness 2*%%rough%%
             phong 0 phong_size 0
             ambient 0
-            diffuse 3
+            diffuse 6
             reflection {0}
             conserve_energy
         }
@@ -39,7 +39,19 @@
             roughness 0.01
             phong 0 phong_size 0
             ambient 0
-            diffuse 3
+            diffuse 6
+            reflection {0}
+            conserve_energy
+        }
+    }
+    texture { // Ambience.
+        pigment {rgbt <1, 1, 1, 0.5>}
+        finish {
+            specular 0
+            roughness 0.01
+            phong 0 phong_size 0
+            ambient rgb 2*%%ambience%%
+            diffuse 0
             reflection {0}
             conserve_energy
         }
@@ -51,7 +63,7 @@
             specular %%spec%%
             roughness %%rough%%
             phong 0 phong_size 0
-            ambient %%ambience%%
+            ambient 0
             diffuse 0
             reflection {0}
             conserve_energy

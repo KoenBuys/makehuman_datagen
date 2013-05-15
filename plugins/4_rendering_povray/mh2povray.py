@@ -489,7 +489,7 @@ def povrayExportMesh2(obj, camera, path, settings, progressCallback = None):
                 '%%rednormal%%','wrinkles 0.75*%s scale 0.0006' % str(settings['wrinkles']))
     matlines = matlines.replace('%%name%%', stuffs[0].name)    
     matlines = matlines.replace(
-        '%%ambience%%','rgb <%f,%f,%f>' % settings['scene'].environment.ambience)
+        '%%ambience%%','<%f,%f,%f>' % settings['scene'].environment.ambience)
     outputFileDescriptor.write(matlines)
     outputFileDescriptor.write('\n')
     
@@ -564,7 +564,7 @@ def writeItemsMaterials(hfile, stuffs, settings, outDir):
         hinfile.close()
         inlines = inlines.replace ("%%name%%",stuff.name)
         inlines = inlines.replace (
-            "%%ambience%%", 'rgb <%f,%f,%f>' %
+            "%%ambience%%", '<%f,%f,%f>' %
             settings['scene'].environment.ambience)
         if stuff.type == 'Hair':
             if settings['hairShine']:
@@ -803,12 +803,12 @@ def povrayProcessSSS(stuffs, outDir, settings, progressCallback = None):
         os.path.join(outDir, '%s_sss_bluelmap.png' % stuffs[0].name))
     # green channel
     progress(0.4*nextpb)
-    lmap2 = imgop.blurred(lmap, 10*sssa, 13, lambda p: progress((0.4+0.3*p)*nextpb))
+    lmap2 = imgop.blurred(lmap, 16*sssa, 13, lambda p: progress((0.4+0.3*p)*nextpb))
     imgop.compose([black,lmap2,black]).save(
         os.path.join(outDir, '%s_sss_greenlmap.png' % stuffs[0].name))
     # red channel
     progress(0.7*nextpb)
-    lmap2 = imgop.blurred(lmap2, 20*sssa, 13, lambda p: progress((0.7+0.3*p)*nextpb))
+    lmap2 = imgop.blurred(lmap2, 32*sssa, 13, lambda p: progress((0.7+0.3*p)*nextpb))
     imgop.compose([lmap2,black,black]).save(
         os.path.join(outDir, '%s_sss_redlmap.png' % stuffs[0].name))
     progbase = nextpb
@@ -817,11 +817,11 @@ def povrayProcessSSS(stuffs, outDir, settings, progressCallback = None):
         # Export blurred bump maps
         lmap = imgop.Image(os.path.join(stuffs[0].bump[0], stuffs[0].bump[1]))
         lmap = imgop.getChannel(lmap,1)
-        lmap = imgop.blurred(lmap, float(lmap.width)/1024*5*sssa, 15,
+        lmap = imgop.blurred(lmap, (float(lmap.width)/1024)*1.6*sssa, 15,
                              lambda p: progress(progbase+0.5*p*(1-progbase)))
         progress(progbase+0.5*(1-progbase))
         lmap.save(os.path.join(outDir, '%s_sss_greenbump.png' % stuffs[0].name))
-        lmap = imgop.blurred(lmap, float(lmap.width)/1024*10*sssa, 15,
+        lmap = imgop.blurred(lmap, (float(lmap.width)/1024)*3.2*sssa, 15,
                              lambda p: progress(progbase+(0.5+0.5*p)*(1-progbase)))
         lmap.save(os.path.join(outDir, '%s_sss_redbump.png' % stuffs[0].name))
         progress(1.0)

@@ -710,18 +710,17 @@ def loadAnimationTrack(anim):
     else:
         # Skeleton and joint rig in BVH are not the same, retarget/remap
         # the motion data:
+        gui3d.app.statusPersist("Currently, animation are only working with soft1 rig, please choose the soft1 rig from the skeleton chooser.")
+        return None
 
-        try:
-            jointToBoneMap = skeleton.loadJointsMapping(human.getSkeleton().name, human.getSkeleton())
-            # TODO this only works if the BVH file contains only reference rig bone names (as is the case with rigid and soft1 rigs), else you need to do a second map
-        except:
+        if not os.path.isfile("tools/blender26x/mh_mocap_tool/target_rigs/%s.trg" % human.getSkeleton().name):
             gui3d.app.statusPersist("Cannot apply motion on the selected skeleton %s because there is no target mapping file for it.", human.getSkeleton().name)
             return None
 
+        jointToBoneMap = skeleton.loadJointsMapping(human.getSkeleton().name, human.getSkeleton())
         animTrack = bvhRig.createAnimationTrack(jointToBoneMap, anim.getAnimationTrackName())
 
     log.debug("Created animation track for %s rig.", human.getSkeleton().name)
-
     log.debug("Frames: %s", animTrack.nFrames)
     log.debug("Playtime: %s", animTrack.getPlaytime())
 

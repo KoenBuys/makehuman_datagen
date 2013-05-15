@@ -153,18 +153,25 @@ class BVH():
                     angle = 0.0
                 if jointName:
                     poseMats = self.getJointByCanonicalName(jointName).matrixPoses.copy()
-                    if angle != 0.0:
-                        # Rotate around global Z axis
-                        rot = tm.rotation_matrix(-angle*D, [0,0,1])
-                        # Roll around global Y axis (this is a limitation)
-                        roll = tm.rotation_matrix(angle*D, [0,1,0])
+                    if isinstance(angle, float):
+                        if angle != 0.0:
+                            # Rotate around global Z axis
+                            rot = tm.rotation_matrix(-angle*D, [0,0,1])
+                            # Roll around global Y axis (this is a limitation)
+                            roll = tm.rotation_matrix(angle*D, [0,1,0])
+                            for i in xrange(nFrames):
+                                # TODO make into numpy loop
+                                poseMats[i] = np.dot(poseMats[i], rot)
+                                poseMats[i] = np.dot(poseMats[i], roll)
+                    else:
                         for i in xrange(nFrames):
                             # TODO make into numpy loop
-                            poseMats[i] = np.dot(poseMats[i], rot)
-                            poseMats[i] = np.dot(poseMats[i], roll)
+                            #poseMats[i] = np.dot(np.dot(angle, poseMats[i]), angle.transpose())
+                            #poseMats[i] = np.dot(angle, poseMats[i])
+                            poseMats[i] = np.dot(angle, np.dot(poseMats[i], la.inv(angle)))
                     jointsData.append(poseMats)
                 else:
-                    jointsData.append(np.tile(np.identity(4), nFrames).transpose().reshape((nFrames,4,4)))
+                    jointsData.append(animation.emptyTrack(nFrames))
 
         nJoints = len(jointsData)
         nFrames = len(jointsData[0])
@@ -564,7 +571,7 @@ class BVHJoint():
         self.rotOrder = rotOrder
 
         # Calculate pose matrix for each animation frame
-        self.matrixPoses = np.tile(np.identity(4), nFrames).transpose().reshape((nFrames,4,4))
+        self.matrixPoses = animation.emptyTrack(nFrames)
 
         # Add rotations to pose matrices
         if len(rotAngles) > 0 and len(rotAngles) < 3:
