@@ -171,8 +171,8 @@ class PeopleExportTaskView(gui3d.TaskView):
 
         self.bgPlane.mesh.move(0,0,self.backposVal)
         self.groundPlane.mesh.move(0,self.groundposVal,0)
-
-
+        self.bgPlane.hide()
+        self.groundPlane.hide()
         
         displayBox = self.addRightWidget(gui.GroupBox('Display'))
         self.showHumanTggl = displayBox.addWidget(gui.ToggleButton("Show human"))
@@ -500,6 +500,9 @@ class PeopleExportTaskView(gui3d.TaskView):
         self.oldTex = self.human.getTexture()
         self.human.setTexture(os.path.join(DATA_PATH, '..', 'skins', 'bodyparts.png'))  # TODO change hardcoded texture with loaded one??
 
+        self.bgPlane.show()
+        self.groundPlane.show()
+
         if self.humanChanged and self.skel:
             log.message("Reloading skeleton and animation")
             # Reload skeleton and animation
@@ -510,6 +513,8 @@ class PeopleExportTaskView(gui3d.TaskView):
         self.setShowRig(self.showMHXRigTggl.selected)
 
     def onHide(self, event):
+        self.bgPlane.hide()
+        self.groundPlane.hide()
         self.stopPlayback()
         if self.animated:
             self.animated.setToRestPose()
