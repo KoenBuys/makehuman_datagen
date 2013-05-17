@@ -154,27 +154,30 @@ class PeopleExportTaskView(gui3d.TaskView):
         
         #self.texture = mh.Texture()
         mesh = geometry3d.RectangleMesh(20, 20, centered=True)
-        self.backgroundImage = gui3d.app.addObject(gui3d.Object([0, 0, 1], mesh, visible=False))
+        #self.backgroundImage = gui3d.app.addObject(gui3d.Object([0, 0, 1], mesh, visible=False))
+        self.backgroundImage = gui3d.app.addObject(gui3d.Object([0, 0, 1], mesh))
         self.backgroundImage.mesh.setCameraProjection(0) # Set to model camera
-        self.opacity = 100
+        self.opacity = 255 # Set fully visible
         mesh.setColor([255, 255, 255, self.opacity])
         #mesh.setColor([150, 57, 80, self.opacity])
         mesh.setPickable(False)
-        mesh.setShadeless(True)
-        mesh.setDepthless(True)
-        mesh.priority = -90
-
-        self.opacitySlider = optionsBox.addWidget(gui.Slider(value=self.opacity, min=0,max=255, label = "BG Opacity: %d"))
         
-        @self.opacitySlider.mhEvent
-        def onChanging(value):
-            #self.backgroundImage.mesh.setColor([150, 57, 80, value])
-            self.backgroundImage.mesh.setColor([255, 255, 255, value])
-        @self.opacitySlider.mhEvent
-        def onChange(value):
-            self.opacity = value
-            #self.backgroundImage.mesh.setColor([150, 57, 80, value])
-            self.backgroundImage.mesh.setColor([255, 255, 255, value])
+#        mesh.setShadeless(True)
+
+#         mesh.setDepthless(True)
+#         mesh.priority = -90
+# 
+#         self.opacitySlider = optionsBox.addWidget(gui.Slider(value=self.opacity, min=0,max=255, label = "BG Opacity: %d"))
+#         
+#         @self.opacitySlider.mhEvent
+#         def onChanging(value):
+#             #self.backgroundImage.mesh.setColor([150, 57, 80, value])
+#             self.backgroundImage.mesh.setColor([255, 255, 255, value])
+#         @self.opacitySlider.mhEvent
+#         def onChange(value):
+#             self.opacity = value
+#             #self.backgroundImage.mesh.setColor([150, 57, 80, value])
+#             self.backgroundImage.mesh.setColor([255, 255, 255, value])
             
         self.backgroundTggl = optionsBox.addWidget(gui.ToggleButton("Show background"))
         @self.backgroundTggl.mhEvent
