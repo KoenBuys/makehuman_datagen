@@ -141,8 +141,10 @@ class PeopleExportTaskView(gui3d.TaskView):
         mesh.setColor([0, 0, 0, 255])
         mesh.setShadeless(True)
 
-        self.groundposSlider = optionsBox.addWidget(gui.Slider(value=-9, min=-125,max=125, label = "Ground Pos: %d"))
-        self.groundposVal = -9
+        yOffset = self.getFeetOnGroundOffset()
+        self.groundposSlider = optionsBox.addWidget(gui.Slider(value=int(yOffset), min=-125,max=125, label = "Ground Pos: %d"))
+        self.groundposVal = int(yOffset)
+        self.groundPlane.mesh.move(0,yOffset,0)
 
         @self.groundposSlider.mhEvent
         def onChanging(value):
@@ -170,7 +172,6 @@ class PeopleExportTaskView(gui3d.TaskView):
             self.backposVal = self.backposVal + val
 
         self.bgPlane.mesh.move(0,0,self.backposVal)
-        self.groundPlane.mesh.move(0,self.groundposVal,0)
         self.bgPlane.hide()
         self.groundPlane.hide()
         
@@ -471,6 +472,11 @@ class PeopleExportTaskView(gui3d.TaskView):
         self.bvhAnimated.setActiveAnimation(self.anim.name)
         self.bvhAnimated.setToFrame(frame)
         self.bvhAnimated.setAnimateInPlace(self.animateInPlaceTggl.selected)
+
+    def getFeetOnGroundOffset(self):
+        bBox = self.human.meshData.calcBBox()
+        dy = bBox[0][1]
+        return dy
 
     def onHumanRotated(self, event):
         if self.skelObj:
