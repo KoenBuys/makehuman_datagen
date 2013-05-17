@@ -155,6 +155,12 @@ class RectangleMesh(module3d.Object3D):
         self.coord += (dx, dy, 0)
         self.markCoords(coor=True)
         self.update()
+        
+    def move(self, dx, dy, dz):
+        self.coord += (dx, dy, dz)
+        #print dx, dy, dz
+        self.markCoords(coor=True)
+        self.update()
 
     def setPosition(self, x, y):
         width, height = self.getSize()

@@ -131,80 +131,47 @@ class PeopleExportTaskView(gui3d.TaskView):
         self.useMHCamTggl = optionsBox.addWidget(gui.ToggleButton("Use camera pos"))
         self.useMHCamTggl.setSelected(False)
 
-        self.helpersTggl = optionsBox.addWidget(gui.ToggleButton("Render helpers"))
-        @self.helpersTggl.mhEvent
-        def onClicked(event):
-            global RENDER_HELPERS
-            RENDER_HELPERS = self.helpersTggl.selected
-        self.helpersTggl.setSelected(False)
-
-        self.warningsTggl = optionsBox.addWidget(gui.ToggleButton("Print warnings"))
-        @self.warningsTggl.mhEvent
-        def onClicked(event):
-            global WARNINGS
-            WARNINGS = self.warningsTggl.selected
-        self.warningsTggl.setSelected(False)
-
-        self.showPicsTggl = optionsBox.addWidget(gui.ToggleButton("Show pictures"))
-        @self.showPicsTggl.mhEvent
-        def onClicked(event):
-            global SHOW_PICTURES
-            SHOW_PICTURES = self.showPicsTggl.selected
-        self.showPicsTggl.setSelected(False)
+        bgmesh = geometry3d.RectangleMesh(20, 20, centered=True)
+        self.backgroundImage = gui3d.app.addObject(gui3d.Object([0, 0, 1], bgmesh))
+        self.backgroundImage.mesh.setCameraProjection(0)                # Set to model camera
+        self.bgnd_opacity = 255                                         # Set fully visible
         
-        #self.texture = mh.Texture()
-        mesh = geometry3d.RectangleMesh(20, 20, centered=True)
-        #self.backgroundImage = gui3d.app.addObject(gui3d.Object([0, 0, 1], mesh, visible=False))
-        self.backgroundImage = gui3d.app.addObject(gui3d.Object([0, 0, 1], mesh))
-        self.backgroundImage.mesh.setCameraProjection(0) # Set to model camera
-        self.opacity = 255 # Set fully visible
-        mesh.setColor([255, 255, 255, self.opacity])
-        #mesh.setColor([150, 57, 80, self.opacity])
-        mesh.setPickable(False)
+        self.bgnd_position = gui3d.app.selectedHuman.getPosition()
+        self.backgroundImage.mesh.move(0,0,-100)
         
-#        mesh.setShadeless(True)
-
-#         mesh.setDepthless(True)
-#         mesh.priority = -90
-# 
-#         self.opacitySlider = optionsBox.addWidget(gui.Slider(value=self.opacity, min=0,max=255, label = "BG Opacity: %d"))
-#         
-#         @self.opacitySlider.mhEvent
+        self.bgSlider = optionsBox.addWidget(gui.Slider(0, min=-4000,max=4000, label = "BG distance: %d"))
+#         @self.bgSlider.mhEvent
 #         def onChanging(value):
-#             #self.backgroundImage.mesh.setColor([150, 57, 80, value])
-#             self.backgroundImage.mesh.setColor([255, 255, 255, value])
-#         @self.opacitySlider.mhEvent
+#             print "BG Distance changing"
+#             self.bgnd_position[2] = value
+#             print self.bgnd_position
+#             self.backgroundImage.setPosition(self.bgnd_position)
+#         @self.bgSlider.mhEvent
 #         def onChange(value):
-#             self.opacity = value
-#             #self.backgroundImage.mesh.setColor([150, 57, 80, value])
-#             self.backgroundImage.mesh.setColor([255, 255, 255, value])
-            
-        self.backgroundTggl = optionsBox.addWidget(gui.ToggleButton("Show background"))
-        @self.backgroundTggl.mhEvent
-        def onClicked(value):
-            if self.backgroundTggl.selected:
-                self.backgroundImage.setPosition(gui3d.app.selectedHuman.getPosition())
-                self.backgroundImage.show()
-            else:
-                self.backgroundImage.setPosition(gui3d.app.selectedHuman.getPosition())
-                self.backgroundImage.hide()
-            mh.redraw()
-                
-#         rendBox = self.addRightWidget(gui.GroupBox('Render_settings'))
-#         self.renderStyles = []
-#         self.colGrpRdio = rendBox.addWidget(gui.RadioButton(self.renderStyles, "Use colorgroups", selected = True))
-#         @self.colGrpRdio.mhEvent
-#         def onClicked(event):
-#             #gui3d.RadioButton.onClicked(self.colGrpRdio, event)
-#             self.renderTextures = False
-#          
-#         self.texRdio = rendBox.addWidget(gui.RadioButton(self.renderStyles, "Use texture"))
-#         @self.texRdio.mhEvent
-#         def onClicked(event):
-#             #gui3d.RadioButton.onClicked(self.texRdio, event)
-#             self.renderTextures = True
-#         self.renderTextures = True
+#             print "BG Distance change"
+#             self.bgnd_position[2] = value
+#             print self.bgnd_position
+#             self.backgroundImage.setPosition(self.bgnd_position)
 
+        self.moveButton = optionsBox.addWidget(gui.Button('Move'))
+        @self.moveButton.mhEvent
+        def onClicked(event):
+            self.backgroundImage.mesh.move(0,0,self.bgSlider.getValue())
+            print "Move:"
+            print self.bgSlider.getValue()
+            mh.redraw()
+            
+        bgmesh.setColor([255, 255, 255, self.bgnd_opacity])
+        #mesh.setColor([150, 57, 80, self.opacity])
+        bgmesh.setPickable(False)
+        
+        gndmesh = geometry3d.RectangleMesh(20, 20, centered=True)
+        self.groundImage = gui3d.app.addObject(gui3d.Object([0, 0, 1], gndmesh))
+        self.groundImage.mesh.setCameraProjection(0)                    # Set to model camera
+        self.gnd_opacity = 255                                          # Set fully visible
+        gndmesh.setColor([255, 255, 255, self.gnd_opacity])
+        gndmesh.setPickable(False)
+        
         displayBox = self.addRightWidget(gui.GroupBox('Display'))
         self.showHumanTggl = displayBox.addWidget(gui.ToggleButton("Show human"))
         @self.showHumanTggl.mhEvent
@@ -932,7 +899,6 @@ def load(app):
     taskview = category.addTask(PeopleExportTaskView(category))
 
     log.message('PCL/People loaded')
-
 
 def unload(app):
     pass
