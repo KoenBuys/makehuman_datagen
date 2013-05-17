@@ -1,0 +1,4 @@
+## Ignore binary cache files
+*.pyc
+*.npz
+*.py~
