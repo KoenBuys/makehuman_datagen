@@ -131,46 +131,49 @@ class PeopleExportTaskView(gui3d.TaskView):
         self.useMHCamTggl = optionsBox.addWidget(gui.ToggleButton("Use camera pos"))
         self.useMHCamTggl.setSelected(False)
 
-        bgmesh = geometry3d.RectangleMesh(20, 20, centered=True)
-        self.backgroundImage = gui3d.app.addObject(gui3d.Object([0, 0, 1], bgmesh))
-        self.backgroundImage.mesh.setCameraProjection(0)                # Set to model camera
-        self.bgnd_opacity = 255                                         # Set fully visible
-        
-        self.bgnd_position = gui3d.app.selectedHuman.getPosition()
-        self.backgroundImage.mesh.move(0,0,-100)
-        
-        self.bgSlider = optionsBox.addWidget(gui.Slider(0, min=-4000,max=4000, label = "BG distance: %d"))
-#         @self.bgSlider.mhEvent
-#         def onChanging(value):
-#             print "BG Distance changing"
-#             self.bgnd_position[2] = value
-#             print self.bgnd_position
-#             self.backgroundImage.setPosition(self.bgnd_position)
-#         @self.bgSlider.mhEvent
-#         def onChange(value):
-#             print "BG Distance change"
-#             self.bgnd_position[2] = value
-#             print self.bgnd_position
-#             self.backgroundImage.setPosition(self.bgnd_position)
+        mesh = BackPlane(20, 20, centered=True)
+        self.bgPlane = gui3d.app.addObject(gui3d.Object([0, 0, 0], mesh))
+        mesh.setColor([255, 255, 255, 255])
+        mesh.setShadeless(True)
 
-        self.moveButton = optionsBox.addWidget(gui.Button('Move'))
-        @self.moveButton.mhEvent
-        def onClicked(event):
-            self.backgroundImage.mesh.move(0,0,self.bgSlider.getValue())
-            print "Move:"
-            print self.bgSlider.getValue()
-            mh.redraw()
-            
-        bgmesh.setColor([255, 255, 255, self.bgnd_opacity])
-        #mesh.setColor([150, 57, 80, self.opacity])
-        bgmesh.setPickable(False)
-        
-        gndmesh = geometry3d.RectangleMesh(20, 20, centered=True)
-        self.groundImage = gui3d.app.addObject(gui3d.Object([0, 0, 1], gndmesh))
-        self.groundImage.mesh.setCameraProjection(0)                    # Set to model camera
-        self.gnd_opacity = 255                                          # Set fully visible
-        gndmesh.setColor([255, 255, 255, self.gnd_opacity])
-        gndmesh.setPickable(False)
+        mesh = GroundPlane(20, 20, centered=True)
+        self.groundPlane = gui3d.app.addObject(gui3d.Object([0, 0, 0], mesh))
+        mesh.setColor([0, 0, 0, 255])
+        mesh.setShadeless(True)
+
+        yOffset = self.getFeetOnGroundOffset()
+        self.groundposSlider = optionsBox.addWidget(gui.Slider(value=int(yOffset), min=-125,max=125, label = "Ground Pos: %d"))
+        self.groundposVal = int(yOffset)
+        self.groundPlane.mesh.move(0,yOffset,0)
+
+        @self.groundposSlider.mhEvent
+        def onChanging(value):
+            val = value - self.groundposVal
+            self.groundPlane.mesh.move(0,val,0)
+            self.groundposVal = self.groundposVal + val
+        @self.groundposSlider.mhEvent
+        def onChange(value):
+            val = value - self.groundposVal
+            self.groundPlane.mesh.move(0,val,0)
+            self.groundposVal = self.groundposVal + val
+
+        self.backposSlider = optionsBox.addWidget(gui.Slider(value=-9, min=-125,max=125, label = "Back Pos: %d"))
+        self.backposVal = -9
+
+        @self.backposSlider.mhEvent
+        def onChanging(value):
+            val = value - self.backposVal
+            self.bgPlane.mesh.move(0,0,val)
+            self.backposVal = self.backposVal + val
+        @self.backposSlider.mhEvent
+        def onChange(value):
+            val = value - self.backposVal
+            self.bgPlane.mesh.move(0,0,val)
+            self.backposVal = self.backposVal + val
+
+        self.bgPlane.mesh.move(0,0,self.backposVal)
+        self.bgPlane.hide()
+        self.groundPlane.hide()
         
         displayBox = self.addRightWidget(gui.GroupBox('Display'))
         self.showHumanTggl = displayBox.addWidget(gui.ToggleButton("Show human"))
@@ -470,17 +473,26 @@ class PeopleExportTaskView(gui3d.TaskView):
         self.bvhAnimated.setToFrame(frame)
         self.bvhAnimated.setAnimateInPlace(self.animateInPlaceTggl.selected)
 
+    def getFeetOnGroundOffset(self):
+        bBox = self.human.meshData.calcBBox()
+        dy = bBox[0][1]
+        return dy
+
     def onHumanRotated(self, event):
         if self.skelObj:
             self.skelObj.setRotation(gui3d.app.selectedHuman.getRotation())
         if self.bvhObj:
             self.bvhObj.setRotation(gui3d.app.selectedHuman.getRotation())
+        self.groundPlane.setRotation(gui3d.app.selectedHuman.getRotation())
+        self.bgPlane.setRotation(gui3d.app.selectedHuman.getRotation())
 
     def onHumanTranslated(self, event):
         if self.skelObj:
             self.skelObj.setPosition(gui3d.app.selectedHuman.getPosition())
         if self.bvhObj:
             self.bvhObj.setPosition(gui3d.app.selectedHuman.getPosition())
+        self.groundPlane.setPosition(gui3d.app.selectedHuman.getPosition())
+        self.bgPlane.setPosition(gui3d.app.selectedHuman.getPosition())
 
     def onHumanChanging(self, event):
         human = event.human
@@ -494,6 +506,9 @@ class PeopleExportTaskView(gui3d.TaskView):
         self.oldTex = self.human.getTexture()
         self.human.setTexture(os.path.join(DATA_PATH, '..', 'skins', 'bodyparts.png'))  # TODO change hardcoded texture with loaded one??
 
+        self.bgPlane.show()
+        self.groundPlane.show()
+
         if self.humanChanged and self.skel:
             log.message("Reloading skeleton and animation")
             # Reload skeleton and animation
@@ -504,6 +519,8 @@ class PeopleExportTaskView(gui3d.TaskView):
         self.setShowRig(self.showMHXRigTggl.selected)
 
     def onHide(self, event):
+        self.bgPlane.hide()
+        self.groundPlane.hide()
         self.stopPlayback()
         if self.animated:
             self.animated.setToRestPose()
@@ -774,6 +791,38 @@ class PeopleExportTaskView(gui3d.TaskView):
             if listItem.filename == filename:
                 self.animationList.setCurrentItem(listItem)
                 return
+
+################################################################################
+
+class GroundPlane(geometry3d.RectangleMesh):
+    """
+    Horizontal plane.
+    """
+
+    def __init__(self, width, height, centered = False, texture=None):
+        super(GroundPlane, self).__init__(width, height, centered, texture)
+        self.setCameraProjection(0)
+
+    def _getVerts(self, width, height):
+        v = super(GroundPlane, self)._getVerts(width, height)
+        v = np.asarray(v, dtype=np.float32)
+        v[:,:] = v[:, [0,2,1]]
+        return v
+
+    def move(self, dx, dy, dz):
+        self.coord += (dx, dy, dz)
+        self.markCoords(coor=True)
+        self.update()
+
+class BackPlane(GroundPlane):
+    """
+    Vertical plane.
+    """
+    def __init__(self, width, height, centered = False, texture=None):
+        super(BackPlane, self).__init__(width, height, centered, texture)
+
+    def _getVerts(self, width, height):
+        return geometry3d.RectangleMesh._getVerts(self, width, height)
 
 ################################################################################
 
