@@ -135,11 +135,13 @@ class PeopleExportTaskView(gui3d.TaskView):
         self.bgPlane = gui3d.app.addObject(gui3d.Object([0, 0, 0], mesh))
         mesh.setColor([255, 255, 255, 255])
         mesh.setShadeless(True)
+        mesh.priority = -90
 
         mesh = GroundPlane(20, 20, centered=True)
         self.groundPlane = gui3d.app.addObject(gui3d.Object([0, 0, 0], mesh))
         mesh.setColor([0, 0, 0, 255])
         mesh.setShadeless(True)
+        mesh.priority = -90
 
         yOffset = self.getFeetOnGroundOffset()
         self.groundposSlider = optionsBox.addWidget(gui.Slider(value=int(yOffset), min=-125,max=125, label = "Ground Pos: %d"))
