@@ -132,13 +132,13 @@ class PeopleExportTaskView(gui3d.TaskView):
         self.useMHCamTggl.setSelected(False)
 
         mesh = BackPlane(20, 20, centered=True)
-        self.bgPlane = gui3d.app.addObject(gui3d.Object([0, 0, 0], mesh))
+        self.bgPlane = self.addObject(gui3d.Object([0, 0, 0], mesh))
         mesh.setColor([255, 255, 255, 255])
         mesh.setShadeless(True)
         mesh.priority = -90
 
         mesh = GroundPlane(20, 20, centered=True)
-        self.groundPlane = gui3d.app.addObject(gui3d.Object([0, 0, 0], mesh))
+        self.groundPlane = self.addObject(gui3d.Object([0, 0, 0], mesh))
         mesh.setColor([0, 0, 0, 255])
         mesh.setShadeless(True)
         mesh.priority = -90
@@ -174,8 +174,6 @@ class PeopleExportTaskView(gui3d.TaskView):
             self.backposVal = self.backposVal + val
 
         self.bgPlane.mesh.move(0,0,self.backposVal)
-        self.bgPlane.hide()
-        self.groundPlane.hide()
         
         displayBox = self.addRightWidget(gui.GroupBox('Display'))
         self.showHumanTggl = displayBox.addWidget(gui.ToggleButton("Show human"))
@@ -307,7 +305,7 @@ class PeopleExportTaskView(gui3d.TaskView):
         skel.setToRestPose() # Make sure skeleton is in rest pose when constructing the skeleton mesh
         self.skelMesh = skeleton_drawing.meshFromSkeleton(skel, "Prism")
         self.skelMesh.priority = 100
-        self.skelObj = gui3d.app.addObject(gui3d.Object(self.human.getPosition(), self.skelMesh) )
+        self.skelObj = self.addObject(gui3d.Object(self.human.getPosition(), self.skelMesh) )
         self.skelObj.setRotation(self.human.getRotation())
 
         # Add the skeleton mesh to the human AnimatedMesh so it animates together with the skeleton
@@ -326,7 +324,7 @@ class PeopleExportTaskView(gui3d.TaskView):
             self.bvhMesh = skeleton_drawing.meshFromSkeleton(self.bvhSkel, "Prism")
             self.bvhMesh.priority = 100
             self.bvhMesh.setColor([0, 255, 0, 255])
-            self.bvhObj = gui3d.app.addObject(gui3d.Object(self.human.getPosition(), self.bvhMesh) )
+            self.bvhObj = self.addObject(gui3d.Object(self.human.getPosition(), self.bvhMesh) )
             self.bvhObj.setRotation(self.human.getRotation())
 
             # Get rigid weights for skeleton mesh
@@ -508,9 +506,6 @@ class PeopleExportTaskView(gui3d.TaskView):
         self.oldTex = self.human.getTexture()
         self.human.setTexture(os.path.join(DATA_PATH, '..', 'skins', 'bodyparts.png'))  # TODO change hardcoded texture with loaded one??
 
-        self.bgPlane.show()
-        self.groundPlane.show()
-
         if self.humanChanged and self.skel:
             log.message("Reloading skeleton and animation")
             # Reload skeleton and animation
@@ -521,8 +516,6 @@ class PeopleExportTaskView(gui3d.TaskView):
         self.setShowRig(self.showMHXRigTggl.selected)
 
     def onHide(self, event):
-        self.bgPlane.hide()
-        self.groundPlane.hide()
         self.stopPlayback()
         if self.animated:
             self.animated.setToRestPose()
